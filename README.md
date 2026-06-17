@@ -7,7 +7,7 @@ trajectories.
 
 Everything lives in [`thermal_prep.py`](thermal_prep.py).
 
-## The algorithm (paper Algorithm 1)
+## The algorithm
 
 Each reset cycle applies the channel `Φ(ρ_S) = Tr_E[U(T)(ρ_S ⊗ ρ_E)U†(T)]`:
 
@@ -101,22 +101,6 @@ from thermal_prep import singlet_initializer, dimer_cover
   `heisenberg_model` (built from `dimer_cover(N, edges)`). Override with
   `run_thermal_prep(..., init_state=singlet_initializer(my_bonds))`.
 
-## Convention map (code ↔ paper)
-
-| Paper | Code | Notes |
-|-------|------|-------|
-| `H_AFIM = Σ Z_iZ_j + Σ(g_xX_i + g_zZ_i)` (Eq. 1) | `ising_model` | |
-| `H_AFHM = Σ(X_iX_j+Y_iY_j+Z_iZ_j)` (Eq. 1) | `heisenberg_model` (`J=1`) | |
-| `H_E = -½ Σ ω_i Z_i` (Eq. 6) | `rz(-dt·ω/2)` ×2 per step | applied as two half-steps |
-| `Pr(X_{iE}) = 1/(1+e^{βω})` (Eq. 7) | `_sample_thermal_bath` | |
-| `ω ∈ (0, ω_max]`, `ω_max = max(4g_x,4g_z,4)` | `omega_max`, uniform draw | `=8` for the kagome AFIM |
-| `O ∈ {X,Y,Z}` (Eq. 9) | `pauli_coupling` | |
-| `O = (XX+YY+ZZ)/3` (Eq. 17) | `heisenberg_coupling` | the `/3` gives `‖O‖₂=1` |
-| AFHM jumps: uniform over `{Paulis} ∪ {singlet pairs}` | `mix_couplings([pauli_coupling(), heisenberg_coupling()])` | default for `heisenberg_model` |
-| `f(t) = N·exp(-t²/4σ²T²)` (Eq. 10), `Σδt f²=1` (Eq. 12) | `_gaussian_envelope`, `run_thermal_prep(..., sigma=...)` | `σ→∞` (default `1e2`) ⇒ constant; `σ≈1/4` smoothly ramps the coupling on/off |
-| `{δt, T, α} = {0.25, 0.75, 1.75}`, `T/δt = 3` | `t_tot=0.75, nTrot=3, alpha=1.75` | |
-| `N_E` environment qubits | `N_bath` | paper uses `N_E=1` for statevector |
-| singlet init `(|01>-|10>)/√2` | `singlet_initializer` | little-endian via circuit |
 
 To reproduce the Section III lattices use `pbc=True` (`N_S = 12, 18, 24` for Kagome lattices
 `(L_x,L_y) = (2,2),(2,3),(2,4)`).
