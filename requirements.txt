@@ -1,0 +1,4 @@
+# thermal_prep.py dependencies (tested with qiskit 2.2, qiskit-aer 0.17, numpy 2.x)
+numpy>=1.23
+qiskit>=1.0
+qiskit-aer>=0.13
