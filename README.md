@@ -100,7 +100,7 @@ from thermal_prep import singlet_initializer, dimer_cover
 - **AFHM:** tensor product of nearest-neighbor SU(2) singlets, the default for
   `heisenberg_model` (built from `dimer_cover(N, edges)`). Override with
   `run_thermal_prep(..., init_state=singlet_initializer(my_bonds))`.
-
+g
 
 To reproduce the Section III lattices use `pbc=True` (`N_S = 12, 18, 24` for Kagome lattices
 `(L_x,L_y) = (2,2),(2,3),(2,4)`).

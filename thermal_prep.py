@@ -29,7 +29,7 @@ from qiskit_aer import AerSimulator
 
 
 # ============================================================================
-# A coupling term is  coeff * X_bath \otimes A_S, where A_S is a product of system
+# A coupling term is  coeff * X_bath (otimes) A_S, where A_S is a product of system
 # Paulis. `sample` returns the (random) terms for one reset cycle as a list of
 #   (paulis, bath_index, coeff)
 # with paulis = [(pauli_char, system_site), ...] giving A_S. The coeffcient is
@@ -53,7 +53,7 @@ class Model:
     N: int                                  # number of system qubits
     hamiltonian: SparsePauliOp              # H_S (defines the energy observable)
     trotter_step: Callable[[QuantumCircuit, float], None]
-    # trotter_step(circ, dt): apply ONE symmetric 2nd-order Trotter step of H_S
+    # trotter_step(circ, dt): apply one symmetric 2nd-order Trotter step of H_S
     # to system qubits 0..N-1, for time dt. Must be consistent with `hamiltonian`.
     coupling: Optional[Coupling] = None     # default (None) -> pauli_coupling()
     initial_state: Optional[Callable[[int, np.random.Generator], np.ndarray]] = None
@@ -64,7 +64,7 @@ class Model:
 # MODELS  --  add a factory here to switch Hamiltonians; nothing else changes.
 # ============================================================================
 def kagome_edges(Lx, Ly, pbc=False):
-    """Bond list of the (Lx, Ly) kagome lattice, 0-based site ids."""
+    """Bond list of the (Lx, Ly) kagome lattice."""
     neigh = {0: [(0, 0, 1), (0, 0, 2), (-1, 0, 1), (0, -1, 2)],
              1: [(0, 0, 0), (0, 0, 2), (1, 0, 0), (1, -1, 2)],
              2: [(0, 0, 0), (0, 0, 1), (0, 1, 0), (-1, 1, 1)]}
@@ -162,8 +162,7 @@ def edge_coloring(edges):
     of pairwise-disjoint bonds, which therefore commute). By Vizing's theorem the chromatic index 
     is Delta or Delta+1, where Delta is the maximum degree of a node; we find an optimal
     coloring by backtracking, trying Delta first. A Delta-regular graph on an odd
-    number of vertices is necessarily class 2 (a Delta-coloring would need perfect
-    matchings, impossible for odd n), so that case skips straight to Delta+1.
+    number of vertices is necessarily class 2, so that case skips straight to Delta+1.
     Returns a list of bond-lists (the color layers). For kagome PBC this gives 4
     colors when N=3*Lx*Ly is even and 5 when odd."""
     edges = [tuple(sorted(e)) for e in edges]
@@ -194,11 +193,11 @@ def heisenberg_model(N, edges, J=1.0, name="heisenberg", *,
     The Trotter step is the canonical symmetric one over an edge coloring:
     neighboring bonds do not commute, so the bonds are grouped into disjoint
     (commuting) color layers and split as e^{-iH_1 dt/2} ... e^{-iH_c dt} ...
-    e^{-iH_1 dt/2}, second-order accurate with the error only between layers.
+    e^{-iH_1 dt/2}.
 
     By default it uses the AFHM jump operators -- single-site Paulis
     and non-local (XX+YY+ZZ)/3 singlet pairs, sampled uniformly over their union
-    -- and a singlet-cover initial state on the bonds; pass `coupling`/
+    -- and a singlet initial state; pass `coupling`/
     `initial_state` to override either.
     """
     terms = []
@@ -224,7 +223,7 @@ def heisenberg_model(N, edges, J=1.0, name="heisenberg", *,
 
 
 def heisenberg_chain(N, J=1.0, pbc=True, **kw):
-    """Isotropic Heisenberg on a 1D chain (ring if pbc)."""
+    """Isotropic Heisenberg on a 1D chain."""
     edges = [(n, (n + 1) % N) for n in range(N if pbc else N - 1)]
     return heisenberg_model(N, edges, J, name=f"heisenberg_chain_{N}", **kw)
 
@@ -234,7 +233,7 @@ def heisenberg_chain(N, J=1.0, pbc=True, **kw):
 # ============================================================================
 def pauli_coupling():
     """Default single-site jump operators  O = {X, Y, Z}: each
-    bath qubit couples via  O_site X_bath, with O a random single-qubit Pauli
+    bath qubit couples via  O_site (otimes) X_bath, with O a random single-qubit Pauli
     on a distinct random site."""
     def sample(N, N_bath, rng):
         kinds = rng.choice(["X", "Y", "Z"], size=N_bath)
@@ -289,7 +288,7 @@ def mix_couplings(couplings, weights=None):
 # INITIAL STATES
 # ============================================================================
 def dimer_cover(N, edges):
-    """Greedy perfect-ish matching of `edges`: a set of disjoint bonds."""
+    """Greedy matching of `edges`: a set of disjoint bonds."""
     used, cover = set(), []
     for a, b in edges:
         if a not in used and b not in used:
@@ -299,8 +298,7 @@ def dimer_cover(N, edges):
 
 def singlet_state(N, bonds):
     """Statevector for a tensor product of SU(2) singlets (|01>-|10>)/sqrt(2)
-    on the given disjoint `bonds`; any unpaired qubit is left in |0>.
-    Built via a circuit so it matches Qiskit's little-endian qubit ordering."""
+    on the given disjoint `bonds`; any unpaired qubit is left in |0>."""
     qc = QuantumCircuit(N)
     for a, b in bonds:
         qc.h(a); qc.cx(a, b); qc.x(b); qc.z(a)      # -> (|01>-|10>)/sqrt(2) on (a,b)
@@ -308,7 +306,7 @@ def singlet_state(N, bonds):
 
 
 def singlet_initializer(bonds):
-    """initial_state callable that returns the (fixed) singlet-cover state."""
+    """initial_state callable that returns the singlet state."""
     def init(N, rng):
         return singlet_state(N, bonds).copy()
     return init
@@ -358,7 +356,7 @@ def _add_evolution(circ, model, omega, alpha, nTrot, t_tot, rng, coupling, sigma
     def coupling_layer(st):
         amp = g[st] * dt * alpha                       # = g[st] * dt * 2 * alpha / 2
         for paulis, b, coeff in terms:
-            # term = coeff * X_bath (x) prod(paulis), applied as one Pauli rotation
+            # term = coeff * X_bath (otimes) prod(paulis), applied as one Pauli rotation
             _pauli_rotation(circ, [("X", N + b)] + list(paulis), coeff * amp)
 
     for st in range(nTrot):
@@ -394,7 +392,7 @@ def _random_product_state(N, rng):
 
 
 def _embed(sys_state, bath_int, N, N_bath):
-    """Full state = |bath_int>_bath (x) |sys_state>_system  (bath = most significant qubits)."""
+    """Full state = |bath_int>_bath (otimes) |sys_state>_system  (bath = most significant qubits)."""
     full = np.zeros(1 << (N + N_bath), dtype=complex)
     full[bath_int << N: (bath_int + 1) << N] = sys_state
     return full
@@ -420,9 +418,7 @@ def thermal_ensemble(H, beta, cutoff_over_beta=8):
     Returns (eigvecs, weights): the eigenstates within cutoff_over_beta/beta of
     the ground state (columns of eigvecs, shape (2^N, K)) and their normalized
     Boltzmann weights w_i ~ exp(-beta E_i) (shape (K,)). Used to build the
-    target state sigma = sum_i w_i |e_i><e_i| for the fidelity. Requires a dense
-    diagonalization, so it is exponential in N and only invoked when fidelity is
-    requested.
+    target state sigma = sum_i w_i |e_i><e_i| for the fidelity.
     """
     H = H.toarray() if hasattr(H, "toarray") else np.asarray(H)
     evals, evecs = np.linalg.eigh(H)                  
@@ -457,7 +453,7 @@ def hs_fidelity(states, eigvecs, weights):
 
 
 def _auto_batch(n_total_qubits, nSamples, budget_bytes=8_000_000_000):
-    """Largest batch of circuits whose statevectors fit the memory budget. Default 8G"""
+    """Largest batch of circuits whose statevectors fit the memory budget. Default 8Gb"""
     per = (1 << n_total_qubits) * 16 * 2                      # ~ stored state + result, complex128
     return max(1, min(nSamples, budget_bytes // per))
 
@@ -476,7 +472,7 @@ def run_thermal_prep(model, *, alpha, beta, t_tot, nTrot, nSteps, nSamples,
                  (Eq. 10). Large sigma (default 1e2) -> effectively constant
                  filter; sigma ~ 1/4 smoothly turns the coupling on/off, which
                  lowers the fixed-point error at longer T.
-    coupling   : system-bath jump operators (a `Coupling`); default falls back to
+    coupling   : system-bath jump operators; default falls back to
                  model.coupling, else pauli_coupling().
     init_state : initial-state callable (N, rng) -> statevector; default falls
                  back to model.initial_state, else a random product state.
@@ -486,8 +482,7 @@ def run_thermal_prep(model, *, alpha, beta, t_tot, nTrot, nSteps, nSamples,
     fidelity of the sampled ensemble against the Gibbs state of model.hamiltonian
     at this beta (see `hs_fidelity`). In that case the return value is
         (energies, fidelity, fidelity_stderr)
-    where fidelity and fidelity_stderr have shape (nSteps+1,). Computing the
-    fidelity dense-diagonalizes H_S once (exponential in N).
+    where fidelity and fidelity_stderr have shape (nSteps+1,).
     """
     rng = np.random.default_rng(seed)
     N = model.N
