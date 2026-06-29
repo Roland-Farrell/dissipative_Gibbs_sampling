@@ -1,4 +1,4 @@
-# Dissipative thermal-state preparation (statevector)
+# Dissipative thermal-state preparation 
 
 A statevector implementation of the dissipative quantum Gibbs
 sampler originally developed in *"End-to-End Efficient Quantum Thermal and Ground State Preparation Made Simple"* (https://arxiv.org/abs/2508.05703) and demonstrated on IBM's quantum computers in *"Preparing thermal states of frustrated quantum spin systems using 139 qubits"* (https://arxiv.org/abs/2605.26245).
